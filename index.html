@@ -1,0 +1,237 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MARVELDLE | Superhero Word Game</title>
+<style>
+    * { box-sizing: border-box; }
+
+    body {
+        margin: 0;
+        background: #121213;
+        color: white;
+        font-family: Arial, sans-serif;
+        text-align: center;
+    }
+
+    header {
+        padding: 22px 10px 16px;
+        border-bottom: 1px solid #3a3a3c;
+    }
+
+    h1 {
+        color: #e62429;
+        margin: 0;
+        font-size: clamp(30px, 8vw, 42px);
+        letter-spacing: 3px;
+    }
+
+    header p { font-size: 12px; letter-spacing: 2px; }
+
+    #board {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 6px;
+        width: min(310px, 90vw);
+        margin: 22px auto;
+    }
+
+    .tile {
+        width: 100%;
+        aspect-ratio: 1;
+        border: 2px solid #3a3a3c;
+        display: grid;
+        place-items: center;
+        font-size: clamp(20px, 6vw, 28px);
+        font-weight: bold;
+    }
+
+    .green { background: #538d4e; border-color: #538d4e; }
+    .yellow { background: #b59f3b; border-color: #b59f3b; }
+    .gray { background: #3a3a3c; border-color: #3a3a3c; }
+
+    #message {
+        min-height: 24px;
+        padding: 0 12px;
+        font-size: 14px;
+    }
+
+    input {
+        width: 180px;
+        padding: 12px;
+        font-size: 18px;
+        text-align: center;
+        text-transform: uppercase;
+        border: 1px solid #777;
+        border-radius: 5px;
+    }
+
+    button {
+        padding: 12px 16px;
+        margin: 5px;
+        border: none;
+        border-radius: 5px;
+        background: #e62429;
+        color: white;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    button:hover { background: #b71c1c; }
+
+    #restart { background: #444; }
+
+    .instructions {
+        color: #ccc;
+        font-size: 13px;
+        line-height: 1.7;
+        padding: 0 12px;
+    }
+
+    footer {
+        margin: 25px 12px;
+        color: #888;
+        font-size: 11px;
+        line-height: 1.5;
+    }
+</style>
+</head>
+
+<body>
+<header>
+    <h1>MARVELDLE</h1>
+    <p>YOUR NEXT SUPERHERO CHALLENGE</p>
+</header>
+
+<p class="instructions">
+    Guess the 5-letter character in 6 tries!<br>
+    🟩 Right letter, right spot<br>
+    🟨 Right letter, wrong spot<br>
+    ⬛ Letter not in the answer
+</p>
+
+<div id="board" aria-label="Guess board"></div>
+
+<div>
+    <input id="guess" maxlength="5" placeholder="5 LETTERS"
+           aria-label="Enter your guess" autocomplete="off">
+    <div>
+        <button id="submit">SUBMIT GUESS</button>
+        <button id="restart">NEW GAME</button>
+    </div>
+</div>
+
+<p id="message" role="status">The fate of the universe is in your hands!</p>
+
+<footer>
+    Unofficial fan-made guessing game.<br>
+    Not affiliated with or endorsed by Marvel or the New York Times.
+</footer>
+
+<script>
+const words = [
+    "WANDA", "STARK", "BUCKY", "PETER",
+    "BRUCE", "CLINT", "CAROL", "ROGUE",
+    "STORM", "BLADE", "LOGAN", "SHURI",
+    "SCOTT", "JAMES", "RHODE", "MILES"
+];
+
+let answer, attempts, finished;
+
+const board = document.getElementById("board");
+const input = document.getElementById("guess");
+const message = document.getElementById("message");
+
+function newGame() {
+    answer = words[Math.floor(Math.random() * words.length)];
+    attempts = 0;
+    finished = false;
+    board.innerHTML = "";
+
+    for (let i = 0; i < 30; i++) {
+        const tile = document.createElement("div");
+        tile.className = "tile";
+        board.appendChild(tile);
+    }
+
+    input.value = "";
+    input.disabled = false;
+    document.getElementById("submit").disabled = false;
+    message.textContent = "A new mission begins!";
+    input.focus();
+}
+
+function submitGuess() {
+    if (finished) return;
+
+    const guess = input.value.trim().toUpperCase();
+
+    if (!/^[A-Z]{5}$/.test(guess)) {
+        message.textContent = "Enter exactly 5 letters!";
+        return;
+    }
+
+    const tiles = board.children;
+    const start = attempts * 5;
+    const remaining = {};
+
+    for (const letter of answer) {
+        remaining[letter] = (remaining[letter] || 0) + 1;
+    }
+
+    const colors = Array(5).fill("gray");
+
+    // Match correct positions first.
+    for (let i = 0; i < 5; i++) {
+        if (guess[i] === answer[i]) {
+            colors[i] = "green";
+            remaining[guess[i]]--;
+        }
+    }
+
+    // Then match misplaced letters.
+    for (let i = 0; i < 5; i++) {
+        if (colors[i] !== "green" && remaining[guess[i]] > 0) {
+            colors[i] = "yellow";
+            remaining[guess[i]]--;
+        }
+    }
+
+    for (let i = 0; i < 5; i++) {
+        tiles[start + i].textContent = guess[i];
+        tiles[start + i].classList.add(colors[i]);
+    }
+
+    attempts++;
+    input.value = "";
+
+    if (guess === answer) {
+        message.textContent = "ASSEMBLED! You guessed " + answer + "!";
+        finishGame();
+    } else if (attempts === 6) {
+        message.textContent = "Mission failed! The answer was " + answer + ".";
+        finishGame();
+    } else {
+        message.textContent = "Attempts used: " + attempts + " / 6";
+    }
+}
+
+function finishGame() {
+    finished = true;
+    input.disabled = true;
+    document.getElementById("submit").disabled = true;
+}
+
+document.getElementById("submit").addEventListener("click", submitGuess);
+document.getElementById("restart").addEventListener("click", newGame);
+
+input.addEventListener("keydown", function(event) {
+    if (event.key === "Enter") submitGuess();
+});
+
+newGame();
+</script>
+</body>
+</html>
